@@ -79,6 +79,7 @@ export async function searchAlbums(query) {
       artworkUrlSmall: album.artworkUrl100,
       releaseDate: album.releaseDate,
       trackCount: album.trackCount,
+      source: 'itunes',
     }));
   } catch (error) {
     console.error('Failed to search albums:', error);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { generateCDCoverPDF, generateJewelCasePDF } from '../utils/pdfCreator';
-import { getAlbumTracks } from '../utils/itunesApi';
+import { getAlbumTracks } from '../utils/musicbrainzApi';
 
 export default function PdfGenerator({ album }) {
   const [outputType, setOutputType] = useState('sleeve');

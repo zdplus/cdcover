@@ -112,24 +112,26 @@ export async function generateCDCoverPDF(album, tracks = [], paperSize = 'letter
     const tracksBottomY = backPanelY + PANEL_SIZE - margin - 32;
     const availableSpace = tracksBottomY - tracksTopY;
 
-    const maxTracksPerColumn = 14;
+    const maxTracksPerColumn = 12;
     const useDoubleColumn = tracks.length > maxTracksPerColumn;
 
     doc.setTextColor(50, 50, 50);
 
     if (useDoubleColumn) {
-      // Two columns layout
-      const maxTracks = Math.min(tracks.length, maxTracksPerColumn * 2); // up to 28 tracks
-      const tracksPerColumn = Math.ceil(maxTracks / 2);
-      const lineHeight = Math.max(availableSpace / tracksPerColumn, textHeight + 1);
+      // Two columns layout - show all tracks, split evenly
+      const totalTracks = tracks.length;
+      const firstColumnCount = Math.ceil(totalTracks / 2);
+      const secondColumnCount = totalTracks - firstColumnCount;
+      const maxPerColumn = Math.max(firstColumnCount, secondColumnCount);
+      const lineHeight = Math.max(availableSpace / maxPerColumn, textHeight + 1);
 
       // Column positions (180° rotation swaps left/right after fold)
-      const columnOffset = 28; // distance from center to each column center
+      const columnOffset = 28;
       const rightColumnX = backCenterX + columnOffset; // PDF right = visual left after fold
       const leftColumnX = backCenterX - columnOffset;  // PDF left = visual right after fold
 
-      // First half (tracks 1 to tracksPerColumn) - appears in LEFT column after fold
-      tracks.slice(0, tracksPerColumn).forEach((track, i) => {
+      // First half - appears in LEFT column after fold
+      tracks.slice(0, firstColumnCount).forEach((track, i) => {
         const y = tracksBottomY - (i * lineHeight);
         let name = track.name.length > 16 ? track.name.substring(0, 14) + '..' : track.name;
         const text = track.duration
@@ -138,8 +140,8 @@ export async function generateCDCoverPDF(album, tracks = [], paperSize = 'letter
         drawCenteredRotated(text, rightColumnX, y, 6);
       });
 
-      // Second half (remaining tracks) - appears in RIGHT column after fold
-      tracks.slice(tracksPerColumn, maxTracks).forEach((track, i) => {
+      // Second half - appears in RIGHT column after fold
+      tracks.slice(firstColumnCount).forEach((track, i) => {
         const y = tracksBottomY - (i * lineHeight);
         let name = track.name.length > 16 ? track.name.substring(0, 14) + '..' : track.name;
         const text = track.duration
@@ -147,17 +149,11 @@ export async function generateCDCoverPDF(album, tracks = [], paperSize = 'letter
           : `${track.number}. ${name}`;
         drawCenteredRotated(text, leftColumnX, y, 6);
       });
-
-      if (tracks.length > maxTracks) {
-        doc.setTextColor(120, 120, 120);
-        drawCenteredRotated(`+ ${tracks.length - maxTracks} more`, backCenterX, tracksTopY - lineHeight, 5);
-      }
     } else {
-      // Single column layout
-      const maxTracks = Math.min(tracks.length, maxTracksPerColumn);
-      const lineHeight = Math.max(availableSpace / maxTracks, textHeight + 1);
+      // Single column layout - show all tracks
+      const lineHeight = Math.max(availableSpace / tracks.length, textHeight + 1);
 
-      tracks.slice(0, maxTracks).forEach((track, i) => {
+      tracks.forEach((track, i) => {
         const y = tracksBottomY - (i * lineHeight);
         let name = track.name.length > 22 ? track.name.substring(0, 20) + '..' : track.name;
         const text = track.duration
@@ -410,16 +406,18 @@ export async function generateJewelCasePDF(album, tracks = [], paperSize = 'lett
     doc.setTextColor(50, 50, 50);
 
     if (useDoubleColumn) {
-      const maxTracks = Math.min(tracks.length, maxTracksPerColumn * 2);
-      const tracksPerColumn = Math.ceil(maxTracks / 2);
-      const lineHeight = Math.min(availableHeight / tracksPerColumn, 7);
+      // Show all tracks split evenly between columns
+      const totalTracks = tracks.length;
+      const firstColumnCount = Math.ceil(totalTracks / 2);
+      const maxPerColumn = firstColumnCount;
+      const lineHeight = Math.min(availableHeight / maxPerColumn, 7);
 
       const colOffset = 32;
       const leftColX = contentCenterX - colOffset;
       const rightColX = contentCenterX + colOffset;
 
       // Left column
-      tracks.slice(0, tracksPerColumn).forEach((track, i) => {
+      tracks.slice(0, firstColumnCount).forEach((track, i) => {
         const y = tracksStartY + (i * lineHeight);
         let name = track.name.length > 18 ? track.name.substring(0, 16) + '..' : track.name;
         const text = track.duration
@@ -429,7 +427,7 @@ export async function generateJewelCasePDF(album, tracks = [], paperSize = 'lett
       });
 
       // Right column
-      tracks.slice(tracksPerColumn, maxTracks).forEach((track, i) => {
+      tracks.slice(firstColumnCount).forEach((track, i) => {
         const y = tracksStartY + (i * lineHeight);
         let name = track.name.length > 18 ? track.name.substring(0, 16) + '..' : track.name;
         const text = track.duration
@@ -437,11 +435,6 @@ export async function generateJewelCasePDF(album, tracks = [], paperSize = 'lett
           : `${track.number}. ${name}`;
         doc.text(text, rightColX, y, { align: 'center' });
       });
-
-      if (tracks.length > maxTracks) {
-        doc.setTextColor(120, 120, 120);
-        doc.text(`+ ${tracks.length - maxTracks} more tracks`, contentCenterX, tracksEndY, { align: 'center' });
-      }
     } else {
       const lineHeight = Math.min(availableHeight / tracks.length, 7);
 

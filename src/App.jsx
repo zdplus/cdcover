@@ -2,7 +2,7 @@ import { useState } from 'react';
 import SearchBar from './components/SearchBar';
 import AlbumResults from './components/AlbumResults';
 import PdfGenerator from './components/PdfGenerator';
-import { searchAlbums } from './utils/itunesApi';
+import { searchAlbums } from './utils/musicbrainzApi';
 import './App.css';
 
 function App() {
@@ -60,7 +60,7 @@ function App() {
       </main>
 
       <footer>
-        <p>Album data provided by iTunes Search API</p>
+        <p>Album data provided by MusicBrainz</p>
       </footer>
     </div>
   );
