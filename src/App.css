@@ -132,15 +132,17 @@ main {
 .album-card {
   cursor: pointer;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   border: 2px solid var(--border);
   transition: border-color 0.2s, transform 0.2s;
   background: var(--bg);
+  position: relative;
 }
 
 .album-card:hover {
   border-color: var(--accent-border);
   transform: translateY(-2px);
+  z-index: 50;
 }
 
 .album-card.selected {
@@ -153,6 +155,15 @@ main {
   aspect-ratio: 1;
   object-fit: cover;
   display: block;
+}
+
+.album-artwork-placeholder {
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  font-size: 12px;
 }
 
 .album-info {
@@ -176,6 +187,71 @@ main {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Track Tooltip */
+.track-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  min-width: 220px;
+  max-width: 280px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+
+.track-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid var(--border);
+}
+
+.track-tooltip ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.track-tooltip li {
+  font-size: 11px;
+  color: var(--text-h);
+  padding: 3px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.track-tooltip li .duration {
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.track-tooltip li.more {
+  color: var(--text);
+  font-style: italic;
+  justify-content: center;
+  padding-top: 6px;
+}
+
+.track-tooltip .loading,
+.track-tooltip .no-tracks {
+  font-size: 12px;
+  color: var(--text);
+  display: block;
+  text-align: center;
 }
 
 /* PDF Generator */
@@ -213,6 +289,18 @@ main {
   height: 80px;
   border-radius: 6px;
   object-fit: cover;
+}
+
+.preview-img-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 6px;
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  font-size: 11px;
 }
 
 .preview-info h3 {

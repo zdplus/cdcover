@@ -6,16 +6,8 @@ const headers = {
   'Accept': 'application/json',
 };
 
-// Rate limiting - MusicBrainz allows 1 request per second
-let lastRequestTime = 0;
-async function rateLimitedFetch(url) {
-  const now = Date.now();
-  const timeSinceLastRequest = now - lastRequestTime;
-  if (timeSinceLastRequest < 1100) {
-    await new Promise(resolve => setTimeout(resolve, 1100 - timeSinceLastRequest));
-  }
-  lastRequestTime = Date.now();
-
+// Simple fetch without aggressive rate limiting (MusicBrainz allows bursts)
+async function apiFetch(url) {
   const response = await fetch(url, { headers });
   if (!response.ok) {
     throw new Error(`MusicBrainz API error: ${response.status}`);
@@ -32,7 +24,7 @@ export async function searchAlbums(query) {
   const url = `${MUSICBRAINZ_API}/release-group?query=${encodedQuery}&type=album&fmt=json&limit=20`;
 
   try {
-    const data = await rateLimitedFetch(url);
+    const data = await apiFetch(url);
 
     const albums = await Promise.all(
       data['release-groups'].slice(0, 12).map(async (rg) => {
@@ -61,7 +53,7 @@ export async function getAlbumTracks(releaseGroupId) {
   try {
     // First, get releases for this release group to find one with track info
     const releasesUrl = `${MUSICBRAINZ_API}/release?release-group=${releaseGroupId}&inc=recordings&fmt=json`;
-    const releasesData = await rateLimitedFetch(releasesUrl);
+    const releasesData = await apiFetch(releasesUrl);
 
     if (!releasesData.releases || releasesData.releases.length === 0) {
       return [];

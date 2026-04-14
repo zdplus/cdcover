@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { generateCDCoverPDF, generateJewelCasePDF } from '../utils/pdfCreator';
 import { getAlbumTracks } from '../utils/musicbrainzApi';
 
@@ -7,6 +7,11 @@ export default function PdfGenerator({ album }) {
   const [paperSize, setPaperSize] = useState('letter');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [album.id]);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -36,7 +41,11 @@ export default function PdfGenerator({ album }) {
       <h2>Create Paper Sleeve</h2>
 
       <div className="selected-album-preview">
-        <img src={album.artworkUrl} alt={album.name} />
+        {imgError ? (
+          <div className="preview-img-placeholder">No Cover</div>
+        ) : (
+          <img src={album.artworkUrl} alt={album.name} onError={() => setImgError(true)} />
+        )}
         <div className="preview-info">
           <h3>{album.name}</h3>
           <p>{album.artist}</p>
