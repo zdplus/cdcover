@@ -1,0 +1,320 @@
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+header h1 {
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: var(--text);
+  font-size: 18px;
+}
+
+main {
+  min-height: 60vh;
+}
+
+/* Search Bar */
+.search-bar {
+  display: flex;
+  gap: 12px;
+  max-width: 600px;
+  margin: 0 auto 30px;
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-h);
+  transition: border-color 0.2s;
+}
+
+.search-bar input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.search-bar button {
+  padding: 12px 24px;
+  font-size: 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.search-bar button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.search-bar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Error Message */
+.error {
+  text-align: center;
+  color: #e53935;
+  margin-bottom: 20px;
+}
+
+/* Content Layout */
+.content-layout {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+
+@media (max-width: 900px) {
+  .content-layout {
+    flex-direction: column;
+  }
+}
+
+/* Album Results */
+.album-results {
+  flex: 1;
+}
+
+.album-results h2 {
+  margin-bottom: 8px;
+}
+
+.results-hint {
+  color: var(--text);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+/* Album Card */
+.album-card {
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  transition: border-color 0.2s, transform 0.2s;
+  background: var(--bg);
+}
+
+.album-card:hover {
+  border-color: var(--accent-border);
+  transform: translateY(-2px);
+}
+
+.album-card.selected {
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+.album-artwork {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+}
+
+.album-info {
+  padding: 12px;
+}
+
+.album-name {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 4px;
+  color: var(--text-h);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-artist {
+  font-size: 12px;
+  color: var(--text);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* PDF Generator */
+.pdf-generator {
+  width: 320px;
+  padding: 24px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  position: sticky;
+  top: 20px;
+}
+
+@media (max-width: 900px) {
+  .pdf-generator {
+    width: 100%;
+    position: static;
+  }
+}
+
+.pdf-generator h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.selected-album-preview {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: center;
+}
+
+.selected-album-preview img {
+  width: 80px;
+  height: 80px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.preview-info h3 {
+  font-size: 16px;
+  margin: 0 0 4px;
+  color: var(--text-h);
+}
+
+.preview-info p {
+  font-size: 14px;
+  color: var(--text);
+  margin: 0;
+}
+
+.track-count {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--accent-bg);
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: 6px;
+}
+
+.sleeve-description {
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.output-type-selector {
+  margin-bottom: 20px;
+}
+
+.output-type-selector > label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 12px;
+  color: var(--text-h);
+}
+
+.paper-size-selector {
+  margin-bottom: 24px;
+}
+
+.paper-size-selector > label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 12px;
+  color: var(--text-h);
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.radio-group label:hover {
+  border-color: var(--accent-border);
+}
+
+.radio-group label.selected {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.radio-group input {
+  accent-color: var(--accent);
+}
+
+.radio-group span {
+  font-size: 14px;
+  color: var(--text-h);
+}
+
+.generate-button {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 500;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.generate-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.generate-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #e53935;
+  font-size: 14px;
+  margin-top: 12px;
+  text-align: center;
+}
+
+/* Footer */
+footer {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text);
+  font-size: 14px;
+  border-top: 1px solid var(--border);
+  margin-top: 60px;
+}
