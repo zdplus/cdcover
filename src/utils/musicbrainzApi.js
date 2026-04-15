@@ -36,6 +36,7 @@ export async function searchAlbums(query) {
           artist: artist,
           artworkUrl: `${COVER_ART_API}/release-group/${rg.id}/front-1200`,
           artworkUrlSmall: `${COVER_ART_API}/release-group/${rg.id}/front-250`,
+          backArtworkUrl: `${COVER_ART_API}/release-group/${rg.id}/back-1200`,
           releaseDate: rg['first-release-date'],
           source: 'musicbrainz',
         };

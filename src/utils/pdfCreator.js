@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { getDiscogsArtwork } from './discogsApi';
 
 // Paper sleeve dimensions (CD is 120mm, add margin for paper thickness when folded)
 const PANEL_SIZE = 132;
@@ -13,6 +14,9 @@ const PAGE_SIZES = {
 
 async function loadImageAsBase64(url) {
   const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
   const blob = await response.blob();
 
   return new Promise((resolve, reject) => {
@@ -20,6 +24,24 @@ async function loadImageAsBase64(url) {
     reader.onloadend = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(blob);
+  });
+}
+
+// Rotate an image 90 degrees clockwise using canvas
+async function rotateImage90(imageData) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.height;
+      canvas.height = img.width;
+      const ctx = canvas.getContext('2d');
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(Math.PI / 2);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      resolve(canvas.toDataURL('image/jpeg', 0.9));
+    };
+    img.src = imageData;
   });
 }
 
@@ -305,7 +327,7 @@ const JEWEL_BACK_WIDTH = 151; // Back tray card total width
 const JEWEL_BACK_HEIGHT = 118; // Back tray card height
 const JEWEL_SPINE_WIDTH = 6.5; // Spine width on each side
 
-export async function generateJewelCasePDF(album, tracks = [], paperSize = 'letter') {
+export async function generateJewelCasePDF(album, tracks = [], paperSize = 'letter', backCoverMode = 'both') {
   const page = PAGE_SIZES[paperSize];
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -313,12 +335,50 @@ export async function generateJewelCasePDF(album, tracks = [], paperSize = 'lett
     format: paperSize === 'letter' ? 'letter' : 'a4',
   });
 
-  // Load album artwork
+  // Load album artwork (front and back)
   let imageData = null;
+  let backImageData = null;
   try {
     imageData = await loadImageAsBase64(album.artworkUrl);
   } catch (error) {
-    console.error('Failed to load image:', error);
+    console.error('Failed to load front image:', error);
+  }
+
+  // Try to load back artwork (may not exist for all albums)
+  let spineImageData = null;
+
+  if (album.backArtworkUrl) {
+    try {
+      backImageData = await loadImageAsBase64(album.backArtworkUrl);
+    } catch (error) {
+      // Back artwork not available from MusicBrainz
+    }
+  }
+
+  // Fallback to Discogs for back and spine artwork
+  if (!backImageData) {
+    try {
+      const discogsArtwork = await getDiscogsArtwork(album.name, album.artist);
+      if (discogsArtwork) {
+        if (discogsArtwork.back) {
+          console.log('Trying to load Discogs back image');
+          backImageData = await loadImageAsBase64(discogsArtwork.back);
+          console.log('Discogs back image loaded successfully');
+        }
+        if (discogsArtwork.spine) {
+          console.log('Trying to load Discogs spine image');
+          spineImageData = await loadImageAsBase64(discogsArtwork.spine);
+          // Rotate if the spine image is horizontal
+          if (discogsArtwork.spineRotated) {
+            console.log('Rotating spine image 90°');
+            spineImageData = await rotateImage90(spineImageData);
+          }
+          console.log('Discogs spine image loaded successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load Discogs artwork:', error.message);
+    }
   }
 
   // ===== FRONT BOOKLET (120mm x 120mm) at top =====
@@ -356,96 +416,188 @@ export async function generateJewelCasePDF(album, tracks = [], paperSize = 'lett
   doc.setFillColor(252, 252, 252);
   doc.rect(backX, backY, JEWEL_BACK_WIDTH, JEWEL_BACK_HEIGHT, 'F');
 
-  // Draw spine areas (slightly darker)
-  doc.setFillColor(245, 245, 245);
-  doc.rect(backX, backY, JEWEL_SPINE_WIDTH, JEWEL_BACK_HEIGHT, 'F'); // Left spine
-  doc.rect(backX + JEWEL_BACK_WIDTH - JEWEL_SPINE_WIDTH, backY, JEWEL_SPINE_WIDTH, JEWEL_BACK_HEIGHT, 'F'); // Right spine
+  // Draw spine areas
+  if (spineImageData) {
+    // Use actual spine artwork from Discogs
+    doc.addImage(spineImageData, 'JPEG', backX, backY, JEWEL_SPINE_WIDTH, JEWEL_BACK_HEIGHT);
+    doc.addImage(spineImageData, 'JPEG', backX + JEWEL_BACK_WIDTH - JEWEL_SPINE_WIDTH, backY, JEWEL_SPINE_WIDTH, JEWEL_BACK_HEIGHT);
+  } else {
+    // Fallback to gray background with text
+    doc.setFillColor(245, 245, 245);
+    doc.rect(backX, backY, JEWEL_SPINE_WIDTH, JEWEL_BACK_HEIGHT, 'F');
+    doc.rect(backX + JEWEL_BACK_WIDTH - JEWEL_SPINE_WIDTH, backY, JEWEL_SPINE_WIDTH, JEWEL_BACK_HEIGHT, 'F');
 
-  // Spine text (rotated)
-  doc.setFontSize(7);
-  doc.setTextColor(50, 50, 50);
-  const spineText = `${album.artist} - ${album.name}`.substring(0, 40);
+    // Spine text (rotated)
+    doc.setFontSize(7);
+    doc.setTextColor(50, 50, 50);
+    const spineText = `${album.artist} - ${album.name}`.substring(0, 40);
 
-  // Left spine (text reads bottom to top)
-  doc.text(spineText, backX + JEWEL_SPINE_WIDTH / 2 + 1, backY + JEWEL_BACK_HEIGHT - 5, { angle: 90 });
+    // Left spine (text reads bottom to top)
+    doc.text(spineText, backX + JEWEL_SPINE_WIDTH / 2 + 1, backY + JEWEL_BACK_HEIGHT - 5, { angle: 90 });
 
-  // Right spine (text reads top to bottom)
-  doc.text(spineText, backX + JEWEL_BACK_WIDTH - JEWEL_SPINE_WIDTH / 2 - 1, backY + 5, { angle: -90 });
+    // Right spine (text reads top to bottom)
+    doc.text(spineText, backX + JEWEL_BACK_WIDTH - JEWEL_SPINE_WIDTH / 2 - 1, backY + 5, { angle: -90 });
+  }
 
   // Main content area dimensions
-  const contentX = backX + JEWEL_SPINE_WIDTH + 5;
-  const contentWidth = JEWEL_BACK_WIDTH - (JEWEL_SPINE_WIDTH * 2) - 10;
+  const margin = 6;
+  const contentAreaX = backX + JEWEL_SPINE_WIDTH;
+  const contentAreaWidth = JEWEL_BACK_WIDTH - (JEWEL_SPINE_WIDTH * 2);
   const contentCenterX = backX + JEWEL_BACK_WIDTH / 2;
-  const margin = 8;
 
-  // Album title and artist at top
-  doc.setFontSize(11);
-  doc.setTextColor(30, 30, 30);
-  doc.setFont(undefined, 'bold');
-  let titleText = album.name;
-  if (doc.getTextWidth(titleText) > contentWidth) {
-    titleText = titleText.substring(0, 25) + '...';
-  }
-  doc.text(titleText, contentCenterX, backY + margin + 5, { align: 'center' });
+  // Decide what to show based on backCoverMode
+  const showBackArtwork = (backCoverMode === 'artwork' || backCoverMode === 'both') && backImageData;
+  const showTrackList = backCoverMode === 'tracks' || backCoverMode === 'both';
 
-  doc.setFont(undefined, 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(80, 80, 80);
-  doc.text(album.artist, contentCenterX, backY + margin + 12, { align: 'center' });
+  if (backCoverMode === 'artwork' && backImageData) {
+    // ARTWORK ONLY MODE: Full back artwork covering the content area
+    doc.addImage(backImageData, 'JPEG', contentAreaX, backY, contentAreaWidth, JEWEL_BACK_HEIGHT);
+  } else if (backCoverMode === 'tracks' || !backImageData) {
+    // TRACKS ONLY MODE (or fallback when no back artwork)
+    const artworkSize = 50;
+    const contentStartX = contentAreaX + margin;
 
-  // Track listing
-  if (tracks.length > 0) {
-    const tracksStartY = backY + margin + 22;
-    const tracksEndY = backY + JEWEL_BACK_HEIGHT - margin - 5;
-    const availableHeight = tracksEndY - tracksStartY;
+    // Add small artwork on left side (use front art if no back art)
+    const smallImage = backImageData || imageData;
+    if (smallImage) {
+      doc.addImage(smallImage, 'JPEG', contentStartX, backY + margin, artworkSize, artworkSize);
+    }
 
-    const maxTracksPerColumn = 12;
-    const useDoubleColumn = tracks.length > maxTracksPerColumn;
+    // Text area (to the right of artwork)
+    const textAreaX = contentStartX + artworkSize + 8;
+    const textAreaWidth = contentAreaX + contentAreaWidth - textAreaX - margin;
+    const textCenterX = textAreaX + textAreaWidth / 2;
 
-    doc.setFontSize(6.5);
-    doc.setTextColor(50, 50, 50);
+    // Album title and artist
+    doc.setFontSize(10);
+    doc.setTextColor(30, 30, 30);
+    doc.setFont(undefined, 'bold');
+    let titleText = album.name;
+    if (doc.getTextWidth(titleText) > textAreaWidth) {
+      titleText = titleText.substring(0, 22) + '...';
+    }
+    doc.text(titleText, textCenterX, backY + margin + 5, { align: 'center' });
 
-    if (useDoubleColumn) {
-      // Show all tracks split evenly between columns
-      const totalTracks = tracks.length;
-      const firstColumnCount = Math.ceil(totalTracks / 2);
-      const maxPerColumn = firstColumnCount;
-      const lineHeight = Math.min(availableHeight / maxPerColumn, 7);
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
+    doc.text(album.artist, textCenterX, backY + margin + 11, { align: 'center' });
 
-      const colOffset = 32;
-      const leftColX = contentCenterX - colOffset;
-      const rightColX = contentCenterX + colOffset;
+    // Track listing below artwork area
+    if (tracks.length > 0) {
+      const tracksStartY = backY + margin + artworkSize + 8;
+      const tracksEndY = backY + JEWEL_BACK_HEIGHT - margin - 3;
+      const availableHeight = tracksEndY - tracksStartY;
 
-      // Left column
-      tracks.slice(0, firstColumnCount).forEach((track, i) => {
-        const y = tracksStartY + (i * lineHeight);
-        let name = track.name.length > 18 ? track.name.substring(0, 16) + '..' : track.name;
-        const text = track.duration
-          ? `${track.number}. ${name} - ${track.duration}`
-          : `${track.number}. ${name}`;
-        doc.text(text, leftColX, y, { align: 'center' });
-      });
+      const maxTracksPerColumn = 8;
+      const useDoubleColumn = tracks.length > maxTracksPerColumn;
 
-      // Right column
-      tracks.slice(firstColumnCount).forEach((track, i) => {
-        const y = tracksStartY + (i * lineHeight);
-        let name = track.name.length > 18 ? track.name.substring(0, 16) + '..' : track.name;
-        const text = track.duration
-          ? `${track.number}. ${name} - ${track.duration}`
-          : `${track.number}. ${name}`;
-        doc.text(text, rightColX, y, { align: 'center' });
-      });
-    } else {
-      const lineHeight = Math.min(availableHeight / tracks.length, 7);
+      doc.setFontSize(6);
+      doc.setTextColor(50, 50, 50);
 
-      tracks.forEach((track, i) => {
-        const y = tracksStartY + (i * lineHeight);
-        let name = track.name.length > 28 ? track.name.substring(0, 26) + '..' : track.name;
-        const text = track.duration
-          ? `${track.number}. ${name} - ${track.duration}`
-          : `${track.number}. ${name}`;
-        doc.text(text, contentCenterX, y, { align: 'center' });
-      });
+      if (useDoubleColumn) {
+        const totalTracks = tracks.length;
+        const firstColumnCount = Math.ceil(totalTracks / 2);
+        const lineHeight = Math.min(availableHeight / firstColumnCount, 6);
+
+        const colOffset = contentAreaWidth / 4;
+        const leftColX = contentCenterX - colOffset;
+        const rightColX = contentCenterX + colOffset;
+
+        tracks.slice(0, firstColumnCount).forEach((track, i) => {
+          const y = tracksStartY + (i * lineHeight);
+          let name = track.name.length > 20 ? track.name.substring(0, 18) + '..' : track.name;
+          const text = track.duration
+            ? `${track.number}. ${name} - ${track.duration}`
+            : `${track.number}. ${name}`;
+          doc.text(text, leftColX, y, { align: 'center' });
+        });
+
+        tracks.slice(firstColumnCount).forEach((track, i) => {
+          const y = tracksStartY + (i * lineHeight);
+          let name = track.name.length > 20 ? track.name.substring(0, 18) + '..' : track.name;
+          const text = track.duration
+            ? `${track.number}. ${name} - ${track.duration}`
+            : `${track.number}. ${name}`;
+          doc.text(text, rightColX, y, { align: 'center' });
+        });
+      } else {
+        const lineHeight = Math.min(availableHeight / tracks.length, 6);
+
+        tracks.forEach((track, i) => {
+          const y = tracksStartY + (i * lineHeight);
+          let name = track.name.length > 30 ? track.name.substring(0, 28) + '..' : track.name;
+          const text = track.duration
+            ? `${track.number}. ${name} - ${track.duration}`
+            : `${track.number}. ${name}`;
+          doc.text(text, contentCenterX, y, { align: 'center' });
+        });
+      }
+    }
+  } else if (backCoverMode === 'both' && backImageData) {
+    // BOTH MODE: Back artwork with semi-transparent overlay for tracks
+    doc.addImage(backImageData, 'JPEG', contentAreaX, backY, contentAreaWidth, JEWEL_BACK_HEIGHT);
+
+    // Semi-transparent overlay at bottom for track list
+    if (tracks.length > 0) {
+      const overlayHeight = Math.min(JEWEL_BACK_HEIGHT * 0.55, 65);
+      const overlayY = backY + JEWEL_BACK_HEIGHT - overlayHeight;
+
+      // Draw semi-transparent white overlay
+      doc.setFillColor(255, 255, 255);
+      doc.setGState(new doc.GState({ opacity: 0.85 }));
+      doc.rect(contentAreaX, overlayY, contentAreaWidth, overlayHeight, 'F');
+      doc.setGState(new doc.GState({ opacity: 1 }));
+
+      // Track list on overlay
+      const tracksStartY = overlayY + 6;
+      const tracksEndY = backY + JEWEL_BACK_HEIGHT - 4;
+      const availableHeight = tracksEndY - tracksStartY;
+
+      const maxTracksPerColumn = 8;
+      const useDoubleColumn = tracks.length > maxTracksPerColumn;
+
+      doc.setFontSize(6);
+      doc.setTextColor(30, 30, 30);
+
+      if (useDoubleColumn) {
+        const totalTracks = tracks.length;
+        const firstColumnCount = Math.ceil(totalTracks / 2);
+        const lineHeight = Math.min(availableHeight / firstColumnCount, 5.5);
+
+        const colOffset = contentAreaWidth / 4;
+        const leftColX = contentCenterX - colOffset;
+        const rightColX = contentCenterX + colOffset;
+
+        tracks.slice(0, firstColumnCount).forEach((track, i) => {
+          const y = tracksStartY + (i * lineHeight);
+          let name = track.name.length > 18 ? track.name.substring(0, 16) + '..' : track.name;
+          const text = track.duration
+            ? `${track.number}. ${name} - ${track.duration}`
+            : `${track.number}. ${name}`;
+          doc.text(text, leftColX, y, { align: 'center' });
+        });
+
+        tracks.slice(firstColumnCount).forEach((track, i) => {
+          const y = tracksStartY + (i * lineHeight);
+          let name = track.name.length > 18 ? track.name.substring(0, 16) + '..' : track.name;
+          const text = track.duration
+            ? `${track.number}. ${name} - ${track.duration}`
+            : `${track.number}. ${name}`;
+          doc.text(text, rightColX, y, { align: 'center' });
+        });
+      } else {
+        const lineHeight = Math.min(availableHeight / tracks.length, 5.5);
+
+        tracks.forEach((track, i) => {
+          const y = tracksStartY + (i * lineHeight);
+          let name = track.name.length > 28 ? track.name.substring(0, 26) + '..' : track.name;
+          const text = track.duration
+            ? `${track.number}. ${name} - ${track.duration}`
+            : `${track.number}. ${name}`;
+          doc.text(text, contentCenterX, y, { align: 'center' });
+        });
+      }
     }
   }
 

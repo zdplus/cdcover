@@ -344,10 +344,21 @@ main {
 }
 
 .paper-size-selector {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .paper-size-selector > label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 12px;
+  color: var(--text-h);
+}
+
+.back-cover-selector {
+  margin-bottom: 24px;
+}
+
+.back-cover-selector > label {
   display: block;
   font-weight: 500;
   margin-bottom: 12px;

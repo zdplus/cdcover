@@ -5,6 +5,7 @@ import { getAlbumTracks } from '../utils/musicbrainzApi';
 export default function PdfGenerator({ album }) {
   const [outputType, setOutputType] = useState('sleeve');
   const [paperSize, setPaperSize] = useState('letter');
+  const [backCoverMode, setBackCoverMode] = useState('both');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
   const [imgError, setImgError] = useState(false);
@@ -23,7 +24,7 @@ export default function PdfGenerator({ album }) {
       console.log('Tracks fetched:', tracks.length);
 
       if (outputType === 'jewel') {
-        await generateJewelCasePDF(album, tracks, paperSize);
+        await generateJewelCasePDF(album, tracks, paperSize, backCoverMode);
       } else {
         await generateCDCoverPDF(album, tracks, paperSize);
       }
@@ -110,6 +111,44 @@ export default function PdfGenerator({ album }) {
           </label>
         </div>
       </div>
+
+      {outputType === 'jewel' && (
+        <div className="back-cover-selector">
+          <label>Back Cover:</label>
+          <div className="radio-group">
+            <label className={backCoverMode === 'artwork' ? 'selected' : ''}>
+              <input
+                type="radio"
+                name="backCoverMode"
+                value="artwork"
+                checked={backCoverMode === 'artwork'}
+                onChange={(e) => setBackCoverMode(e.target.value)}
+              />
+              <span>Artwork Only</span>
+            </label>
+            <label className={backCoverMode === 'tracks' ? 'selected' : ''}>
+              <input
+                type="radio"
+                name="backCoverMode"
+                value="tracks"
+                checked={backCoverMode === 'tracks'}
+                onChange={(e) => setBackCoverMode(e.target.value)}
+              />
+              <span>Track List Only</span>
+            </label>
+            <label className={backCoverMode === 'both' ? 'selected' : ''}>
+              <input
+                type="radio"
+                name="backCoverMode"
+                value="both"
+                checked={backCoverMode === 'both'}
+                onChange={(e) => setBackCoverMode(e.target.value)}
+              />
+              <span>Both (Overlay)</span>
+            </label>
+          </div>
+        </div>
+      )}
 
       <button
         className="generate-button"
